@@ -3,7 +3,7 @@ import imaplib
 import smtplib
 
 def getAccounts(fileName):
-    accounts = config.load(fileName)
+    accounts = config.load([fileName])
     return [EmailAccount(account) for account in accounts]
 
 class EmailAccount(object):
