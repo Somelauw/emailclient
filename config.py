@@ -9,18 +9,24 @@ except ImportError:
 
 class Config(object):
     def __init__(self, config):
-        configfiles = config_locations(config)
-
-        # Now try each config file until it exists
-        for filename in configfiles:
-            try:
-                self.load_config(filename)
-                break
-            except IOError:
-                # File doesn't exist. Continue with next one.
-                pass
+        # Try each config file until it exists
+        for config_dir in config_dirs():
+            for ext in ["json", "yaml"]:
+                filepath = "%s/cursemail/%s.%s" % (config_dir, config, ext)
+                print filepath
+                try:
+                    self.load_config("%s/%s" % (config_dir, filepath))
+                    print filepath
+                    return
+                except IOError:
+                    # File doesn't exist. Continue with next one.
+                    pass
         else:
             raise ConfigError("No config file found")
+
+    def create_config(self, filename):
+        #os.touch(next(config_dirs()) + "/cursemail/config.json")
+        pass # TODO
 
     def load_config(self, filename):
             (_, ext) = os.path.splitext(filename)
@@ -37,22 +43,14 @@ class Config(object):
                 else:
                     raise ConfigError("Unknown file format %s" % filename)
 
-def config_locations(configname):
-    exts = [".yaml", ".json"]
+def config_dirs():
+    # Use xdg standards to find a place to put the config file
+    yield os.environ.get("XDG_CONFIG_HOME", os.environ["HOME"] + "/.config")
 
-    # Find the local config
-    localconfig = os.environ.get("XDG_CONFIG_HOME", 
-            os.environ["HOME"] + "/.config") + "/cursemail/"
-    otherconfigs = [config + "/cursemail/" 
-            for config in os.environ.get("XDG_CONFIG_DIRS", "/etc/xdg/").split(":")]
-    configdirs = [localconfig] + otherconfigs + ["./"]
+    for config in os.environ.get("XDG_CONFIG_DIRS", "/etc/xdg").split(":"):
+        yield config
 
-    # Also try some other config locations
-    configfiles = [configdir + configname + ext 
-            for configdir in configdirs
-            for ext in exts]
-
-    return configfiles
+    yield "."
 
 class ConfigError(Exception):
     pass
