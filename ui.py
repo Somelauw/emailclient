@@ -1,75 +1,47 @@
-import curses
-#import os
-#import sys
-import time
-import curses.wrapper
+import urwid
+import configs
 
-# TODO: Make everything configurable and split everything in subfiles
+class App: 
+    def __init__(self):
+        emails = [email["email"] for email in configs.emails.config]
+        self.menu = Menu("", emails)
 
-def main(stdscr):
-    MenuHandler(stdscr).run()
+    def start(self):
+        palette = [('reversed', 'standout', '')]
+        loop = urwid.MainLoop(self.menu, palette, unhandled_input=self.update)
+        loop.run()
 
-class MenuHandler():
-    def __init__(self, window):
-        self.window = window
-        self.menu = EmailChooser(self)
-    def update(self, keypress):
-        self.menu.update(keypress)
-    def refresh(self):
-        self.menu.refresh()
-    def run(self):
-        while True:
-            self.refresh()
-            time.sleep(0.01)
-            c = self.window.getch()
-            self.update(c)
-            time.sleep(0.01)
+    def update(self, input):
+        self.menu.update(input)
 
-class Menu(object):
-    def __init__(self, menuhandler, title="", options="-"):
-        self.menuhandler = menuhandler
-        self.pad = curses.newpad(100, 100)
-        self.selected = 0
-        self.title = title
-        self.options = options
+class Selectable(urwid.WidgetWrap):
+    def __init__(self, *param, **kw):
+        self._selectable = True
+        text = urwid.Text(*param, **kw)
+        text = urwid.AttrMap(text, None, 'reversed')
+        urwid.WidgetWrap.__init__(self, text)
 
-    def update(self, keypress):
-        actions = {
-                ord("j"): self.next_item,
-                ord("k"): self.previous_item,
-                curses.KEY_ENTER: self.crash,
-                10: self.crash,
-                }
-        if keypress != None:
-            actions[keypress]()
+    def selectable(self):
+        return True
 
-    def next_item(self):
-        self.selected = (self.selected + 1) % len(self.options)
+    def keypress(self, size, key):
+        self.text = "%s-%s" % (size, key)
+        return key
 
-    def previous_item(self):
-        self.selected = (self.selected - 1) % len(self.options)
+class Menu(urwid.WidgetWrap):
+    def __init__(self, caption="", items=[]):
+        self.items = items
 
-    def crash(self):
-        self.menuhandler.window = None
+        self.content = urwid.SimpleListWalker(
+                [urwid.Text(caption)] +\
+                [Selectable(item) for item in self.items])
 
-    def refresh(self):
-        self.pad.addstr(0, 0, self.title, curses.A_BOLD)
+        self.listbox = urwid.ListBox(self.content)
+        urwid.WidgetWrap.__init__(self, self.listbox)
 
-        # Show the items
-        for index, option in enumerate(self.options):
-            self.pad.addstr(1 + 1 * index, 0, option)
+        # TODO add title
 
-        # Show which item is highlighted
-        self.pad.addstr(1 + 1 * self.selected, 0, self.options[self.selected], curses.A_STANDOUT)
-        self.pad.refresh( 0,0, 0,0, 20,75)
+    def update(self, input):
+        return True
 
-class EmailChooser(Menu):
-    def __init__(self, menuHandler):
-        super(EmailChooser, self).__init__(
-                menuHandler, 
-                "Email accounts", 
-                ["Gmail", "Yahoo"])
-
-
-curses.wrapper(main)
-
+App().start()
