@@ -26,41 +26,11 @@ class Menu(urwid.WidgetWrap):
         self.listbox = listbox = urwid.ListBox(self.content)
         urwid.WidgetWrap.__init__(self, listbox)
 
-    #def next(self, shift=1):
-        #(frame, index) = self.content.get_focus()
-        #(frame, index) = self.content.get_next(index)
-        #print index
-        #self.content.set_focus(index)
-
-    #def prev(self, shift=1):
-        #(frame, index) = self.content.get_focus()
-        #(frame, index) = self.content.get_prev(index)
-        #print index
-        #self.content.set_focus(index)
-
-    #def move_selection(self, movement):
-        #(frame, index) = self.content.get_focus()
-        #index += movement
-        #index %= len(self.content)
-        #self.content.set_focus(index)
-
     def up(self, size):
         return self.listbox.keypress(size, "up")
 
     def down(self, size):
         return self.listbox.keypress(size, "down")
-
-    #def keypress(self, size, key):
-        #self.listbox._command_map["j"] = "cursor down"
-        #self.listbox._command_map["k"] = "cursor up"
-
-        #mappings = {
-                ##"j": self.down,
-                ##"k": self.up,
-                #}
-
-        ## Fall back on default behaviour
-        #return mappings.get(key, lambda size: self.listbox.keypress(size, key))(size)
 
     def update(self, input):
         #print input
