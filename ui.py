@@ -23,8 +23,11 @@ class App:
 
     def select_email(self, email):
         debug_file.write(email)
-        self.folderlist.select_email(email)
-        pass
+        #self.folderlist.select_email(email)
+        
+        # Rather I would modify the columns object
+        folderlist = FolderList(self, ["poep"])
+        self.columns.contents = [folderlist]
 
     def start(self):
         palette = [('reversed', 'standout', '')]
