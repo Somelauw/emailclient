@@ -1,64 +1,75 @@
-import urwid
-import configs
-from menu import Menu, Selectable
+import curses
+#import os
+#import sys
+import time
+import curses.wrapper
 
-debug_file = open("debug", "w")
-# Since I don't know where I should put code to close this file, I'll rely on the garbage collector for closing this file.
+# TODO: Make everything configurable and split everything in subfiles
 
-class App: 
-    def __init__(self):
-        self.emaillist = EmailList(self)
-        self.folderlist = FolderList(self)
-        self.menu = self.emaillist
+def main(stdscr):
+    MenuHandler(stdscr).run()
 
-        # Try adding colums
-        self.contents = [self.emaillist, self.folderlist, self.menu]
-        self.columns = urwid.Columns([self.emaillist, self.folderlist, self.menu])
+class MenuHandler():
+    def __init__(self, window):
+        self.window = window
+        self.menu = EmailChooser(self)
+    def update(self, keypress):
+        self.menu.update(keypress)
+    def refresh(self):
+        self.menu.refresh()
+    def run(self):
+        while True:
+            self.refresh()
+            time.sleep(0.01)
+            c = self.window.getch()
+            self.update(c)
+            time.sleep(0.01)
 
-        cm = urwid.command_map#.copy()
-        cm["j"] = "cursor down"
-        cm["k"] = "cursor up"
-        cm["h"] = "cursor left"
-        cm["l"] = "cursor right"
+class Menu(object):
+    def __init__(self, menuhandler, title="", options="-"):
+        self.menuhandler = menuhandler
+        self.pad = curses.newpad(100, 100)
+        self.selected = 0
+        self.title = title
+        self.options = options
 
-    def select_email(self, email):
-        debug_file.write(email)
-        self.folderlist.select_email(email)
-        pass
+    def update(self, keypress):
+        actions = {
+                ord("j"): self.next_item,
+                ord("k"): self.previous_item,
+                curses.KEY_ENTER: self.crash,
+                10: self.crash,
+                }
+        if keypress != None:
+            actions[keypress]()
 
-    def start(self):
-        palette = [('reversed', 'standout', '')]
-        loop = urwid.MainLoop(self.columns, palette, unhandled_input=self.update)
-        loop.run()
+    def next_item(self):
+        self.selected = (self.selected + 1) % len(self.options)
 
-    def update(self, input):
-        print input
-        if input in ("q", "Q"):
-            urwid.ExitMainLoop()
+    def previous_item(self):
+        self.selected = (self.selected - 1) % len(self.options)
 
-    def keypress(self, a, b):
-        print a, b
+    def crash(self):
+        self.menuhandler.window = None
+
+    def refresh(self):
+        self.pad.addstr(0, 0, self.title, curses.A_BOLD)
+
+        # Show the items
+        for index, option in enumerate(self.options):
+            self.pad.addstr(1 + 1 * index, 0, option)
+
+        # Show which item is highlighted
+        self.pad.addstr(1 + 1 * self.selected, 0, self.options[self.selected], curses.A_STANDOUT)
+        self.pad.refresh( 0,0, 0,0, 20,75)
+
+class EmailChooser(Menu):
+    def __init__(self, menuHandler):
+        super(EmailChooser, self).__init__(
+                menuHandler, 
+                "Email accounts", 
+                ["Gmail", "Yahoo"])
 
 
-class EmailList(Menu):
-    def __init__(self, app):
-        self.app = app
-        self.emails = [email["email"] for email in configs.emails.config]
-        super(EmailList, self).__init__(app, "Emailadress", self.emails)
+curses.wrapper(main)
 
-    def keypress(self, a, b):
-        widget, pos = self.listbox.get_focus()
-        email = self.emails[pos - 1]
-        self.app.select_email(email)
-        return super(EmailList, self).keypress(a, b)
-
-class FolderList(Menu):
-    def __init__(self, app, email="bang"):
-        self.app = app
-        super(FolderList, self).__init__(app, "Folders", [email])
-
-    def select_email(self, email):
-        self.content[1:2] = [Selectable(email)]
-        pass
-
-App().start()
